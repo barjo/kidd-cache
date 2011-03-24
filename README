@@ -1,7 +1,6 @@
-
 - cache-service: 
 	contains the caching service.
 
-- cache-handler
-	contains the caching handler based on the cache-service.
+- cache-strategy
+	contains the IPOJOServiceFactory implementation based on the cache-service.
 
