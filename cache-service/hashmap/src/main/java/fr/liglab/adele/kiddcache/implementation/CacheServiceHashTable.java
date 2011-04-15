@@ -5,6 +5,7 @@ import static java.lang.System.currentTimeMillis;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Hashtable;
 import java.util.Map;
 import java.util.Set;
 
@@ -13,7 +14,7 @@ import fr.liglab.adele.kiddcache.ExpirationDate;
 
 public class CacheServiceHashTable implements CacheService {
 
-	private static HashMap<Object, CachedObject> cache = new HashMap<Object, CachedObject>();
+	private static Hashtable<Object, CachedObject> cache = new Hashtable<Object, CachedObject>();
 
 	@Override
 	public void put(Object key, Object value) {
@@ -30,26 +31,29 @@ public class CacheServiceHashTable implements CacheService {
 			PutPolicy policy) {
 
 		boolean created = false;
+		synchronized (cache) {
 
-		switch (policy) {
-		case ALWAYS:
-			cache.put(key, new CachedObject(value, expiration));
-			created = true;
-			break;
-		case ONLY_IF_NOT_PRESENT:
-			if (!cache.containsKey(key)) {
+			switch (policy) {
+			case ALWAYS:
 				cache.put(key, new CachedObject(value, expiration));
 				created = true;
+				break;
+			case ONLY_IF_NOT_PRESENT:
+				if (!cache.containsKey(key)) {
+					cache.put(key, new CachedObject(value, expiration));
+					created = true;
+				}
+				break;
+			case UPDATE_ONLY_IF_CACHED:
+				if (cache.containsKey(key)) {
+					cache.put(key, new CachedObject(value, expiration));
+					created = true;
+				}
+				break;
 			}
-			break;
-		case UPDATE_ONLY_IF_CACHED:
-			if (cache.containsKey(key)) {
-				cache.put(key, new CachedObject(value, expiration));
-				created = true;
-			}
-			break;
+			return created;
+
 		}
-		return created;
 	}
 
 	@Override
@@ -66,66 +70,76 @@ public class CacheServiceHashTable implements CacheService {
 	public <T> Set<T> putAll(Map<T, ?> values, ExpirationDate expiration,
 			PutPolicy policy) {
 		HashSet<T> addedKeys = new HashSet<T>();
-		switch (policy) {
-		case ALWAYS:
-			for (T key : values.keySet()) {
-				cache.put(key, new CachedObject(values.get(key), expiration));
-				addedKeys.add( key);
-			}
-			break;
-		case ONLY_IF_NOT_PRESENT:
-			for (T key : values.keySet()) {
-				if (!cache.containsKey(key)) {
-					cache.put(key,
-							new CachedObject(values.get(key), expiration));
-					addedKeys.add((T) key);
-				}
-			}
-			break;
-		case UPDATE_ONLY_IF_CACHED:
-			for (T key : values.keySet()) {
-				if (cache.containsKey(key)) {
+		synchronized (cache) {
+			switch (policy) {
+			case ALWAYS:
+				for (T key : values.keySet()) {
 					cache.put(key,
 							new CachedObject(values.get(key), expiration));
 					addedKeys.add(key);
 				}
+				break;
+			case ONLY_IF_NOT_PRESENT:
+				for (T key : values.keySet()) {
+					if (!cache.containsKey(key)) {
+						cache.put(key, new CachedObject(values.get(key),
+								expiration));
+						addedKeys.add((T) key);
+					}
+				}
+				break;
+			case UPDATE_ONLY_IF_CACHED:
+				for (T key : values.keySet()) {
+					if (cache.containsKey(key)) {
+						cache.put(key, new CachedObject(values.get(key),
+								expiration));
+						addedKeys.add(key);
+					}
+				}
+				break;
 			}
-			break;
+			return addedKeys;
 		}
-		return addedKeys;
 	}
 
 	@Override
 	public Object get(Object key) {
-		Object returnObject = null;
-		CachedObject cachedObject = cache.get(key);
-		if (cachedObject != null) {
-			if (cachedObject.getExpirationDate()!=null && cachedObject.getExpirationDate().getDateInSeconds() < currentTimeMillis()) {
-				cache.remove(key);
-			} else {
-				returnObject = cachedObject.getObject();
+		synchronized (cache) {
+			Object returnObject = null;
+			CachedObject cachedObject = cache.get(key);
+			if (cachedObject != null) {
+				if (cachedObject.getExpirationDate() != null
+						&& cachedObject.getExpirationDate().getDateInSeconds() < currentTimeMillis()) {
+					cache.remove(key);
+				} else {
+					returnObject = cachedObject.getObject();
+				}
 			}
+			return returnObject;
 		}
-		return returnObject;
 	}
 
 	@Override
 	public <T> Map<T, Object> getAll(Collection<T> keys) {
 		HashMap<T, Object> returnMap = new HashMap<T, Object>();
-		for (T key : keys) {
-			if (cache.containsKey(key)) {
-				returnMap.put(key, cache.get(key).getObject());
+		synchronized (cache) {
+			for (T key : keys) {
+				if (cache.containsKey(key)) {
+					returnMap.put(key, cache.get(key).getObject());
+				}
 			}
+			return returnMap;
 		}
-		return returnMap;
 	}
 
 	@Override
 	public boolean contains(Object key) {
 		boolean answer = false;
+		synchronized (cache) {
 		if (cache.containsKey(key))
 			answer = true;
 		return answer;
+		}
 	}
 
 	@Override
