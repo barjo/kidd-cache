@@ -13,6 +13,7 @@
 	<properties>
 		<interface.version>1.0.0</interface.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<ipojo.version>1.8.0</ipojo.version>
 	</properties>
 
 	<dependencies>
@@ -29,7 +30,7 @@
 		<dependency>
 			<groupId>org.apache.felix</groupId>
 			<artifactId>org.apache.felix.ipojo</artifactId>
-			<version>1.8.0</version>
+			<version>${ipojo.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>fr.liglab.adele.kidd-cache</groupId>

@@ -20,7 +20,7 @@ public final class ExpirationDate {
 	long getDateInMilliseconds(){
 		return date.getTime();
 	}
-	//TODO check it if public is needed
+	
 	 public long getDateInSeconds(){
 		return SECONDS.convert(getDateInMilliseconds(), MILLISECONDS);
 	}
