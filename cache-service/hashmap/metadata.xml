@@ -2,5 +2,5 @@
 	<component name="cache.service.component" classname="fr.liglab.adele.kiddcache.implementation.CacheServiceHashTable">
 		<provides/>
 	</component>
-	<instance name="cache.service" component="cache.service.component" />
+	<instance name="cache.service.hashtable" component="cache.service.component" />
 </ipojo>

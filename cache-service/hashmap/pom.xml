@@ -5,15 +5,15 @@
 
 	<!-- Project coordinates -->
 	<groupId>fr.liglab.adele.kidd-cache</groupId>
-	<artifactId>cache-service-hashTableImplementation</artifactId>
+	<artifactId>cache-service-hashtable</artifactId>
 	<version>0.1.0-SNAPSHOT</version>
 	<packaging>bundle</packaging>
-	<name>Kidd-Cache::Cache-Service::HashTableImplementation</name>
+	<name>Kidd-Cache::Cache-Service::HashTable::Implementation</name>
 
 	<properties>
 		<interface.version>1.0.0</interface.version>
-		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<ipojo.version>1.8.0</ipojo.version>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
 
 	<dependencies>
@@ -62,7 +62,7 @@
 			<plugin>
 				<groupId>org.apache.felix</groupId>
 				<artifactId>maven-ipojo-plugin</artifactId>
-				<version>1.8.0</version>
+				<version>${ipojo.version}</version>
 				<executions>
 					<execution>
 						<goals>
