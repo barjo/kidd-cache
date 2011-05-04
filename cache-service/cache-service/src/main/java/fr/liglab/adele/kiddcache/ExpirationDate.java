@@ -17,11 +17,11 @@ public final class ExpirationDate {
 		date = pDate;
 	}
 	
-	long getDateInMilliseconds(){
+	public long getDateInMilliseconds(){
 		return date.getTime();
 	}
 	
-	 public long getDateInSeconds(){
+	public long getDateInSeconds(){
 		return SECONDS.convert(getDateInMilliseconds(), MILLISECONDS);
 	}
 	
