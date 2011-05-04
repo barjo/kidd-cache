@@ -1,4 +1,4 @@
-package fr.liglab.cache.factory;
+package fr.liglab.adele.kiddcache.strategy;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -13,7 +13,7 @@ import org.osgi.framework.ServiceRegistration;
 import org.osgi.util.tracker.ServiceTracker;
 import org.osgi.util.tracker.ServiceTrackerCustomizer;
 
-import fr.liglab.cache.service.CacheService;
+import fr.liglab.adele.kiddcache.CacheService;
 
 public class CacheProxy extends CreationStrategy implements InvocationHandler, ServiceTrackerCustomizer {
 	private volatile Object cachedpojo;
@@ -48,11 +48,11 @@ public class CacheProxy extends CreationStrategy implements InvocationHandler, S
 		synchronized (tracker) {
 
 			if (cacheService != null) {
-				returnObject = cacheService.getObject(args[0].toString());
+				returnObject = cacheService.get(args[0].toString());
 
 				if (returnObject == null) {
 					returnObject = method.invoke(manager.getPojoObject(), args);
-					cacheService.setObject(args[0].toString(), returnObject);
+					cacheService.put(args[0].toString(), returnObject);
 				}
 			}
 		}
