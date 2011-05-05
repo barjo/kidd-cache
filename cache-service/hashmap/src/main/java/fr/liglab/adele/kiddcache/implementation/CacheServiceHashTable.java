@@ -6,23 +6,26 @@ import static java.lang.System.currentTimeMillis;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Hashtable;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import fr.liglab.adele.kiddcache.CacheService;
 import fr.liglab.adele.kiddcache.ExpirationDate;
 
 /**
- * {@link CacheService} implementation based on a {@link Hashtable}.
+ * {@link CacheService} implementation based on a {@link Map}.
  * 
  */
 public class CacheServiceHashTable implements CacheService {
+	
+	private final ReadWriteLock rwlock = new ReentrantReadWriteLock();
 
 	/**
-	 * The {@link Hashtable} which contains the cached value.
+	 * The {@link Map} which contains the cached value.
 	 */
-	private final Hashtable<Object, CachedObject> cache = new Hashtable<Object, CachedObject>();
+	private final Map<Object, CachedObject> cache = new HashMap<Object, CachedObject>();
 
 	public void put(Object key, Object value) {
 		put(key, value, null, ALWAYS);
@@ -37,31 +40,22 @@ public class CacheServiceHashTable implements CacheService {
 
 		boolean putted = false;
 
-		synchronized (cache) {
+		switch (policy) {
+		case ALWAYS:
+			putted = syncPutAlways(key, new CachedObject(value, expiration));
+			break;
 
-			switch (policy) {
-				case ALWAYS:
-					cache.put(key, new CachedObject(value, expiration));
-					putted = true;
-					break;
-					
-				case ONLY_IF_NOT_PRESENT:
-					if (!cache.contains(key)) {
-						cache.put(key, new CachedObject(value, expiration));
-						putted = true;
-					}
-					break;
+		case ONLY_IF_NOT_PRESENT:
+			putted = syncPutIfNotPresent(key, new CachedObject(value, expiration));
+			break;
 
-				case UPDATE_ONLY_IF_CACHED:
-					if (cache.contains(key)) {
-						cache.put(key, new CachedObject(value, expiration));
-						putted = true;
-					}
-					break;
-			}
-
-			return putted; //true if and only if a new entry has been put in the cache (i.e hastable)
+		case UPDATE_ONLY_IF_CACHED:
+			putted = syncPutIfCached(key, new CachedObject(value, expiration));
+			break;
 		}
+
+		return putted; // true if and only if a new entry has been put in
+						// the cache (i.e hastable)
 	}
 
 	public void putAll(Map<?, ?> values) {
@@ -74,101 +68,162 @@ public class CacheServiceHashTable implements CacheService {
 
 	public <T> Set<T> putAll(Map<T, ?> values, ExpirationDate expiration,
 			PutPolicy policy) {
-		
-		HashSet<T> addedKeys = new HashSet<T>();
-		
+
+		final HashSet<T> addedKeys = new HashSet<T>();
+
 		synchronized (cache) {
 			switch (policy) {
 			case ALWAYS:
 				for (T key : values.keySet()) {
-					cache.put(key, new CachedObject(values.get(key), expiration));
-					addedKeys.add(key);
-				}
-				break;
-				
-			case ONLY_IF_NOT_PRESENT:
-				for (T key : values.keySet()) {
-					if (!cache.containsKey(key)) {
-						cache.put(key, new CachedObject(values.get(key), expiration));
-						addedKeys.add((T) key);
+					if ( syncPutAlways(key, new CachedObject(values.get(key), expiration)) ){
+							addedKeys.add(key);
 					}
 				}
 				break;
-				
+
+			case ONLY_IF_NOT_PRESENT:
+				for (T key : values.keySet()) {
+					if ( syncPutIfNotPresent(key, new CachedObject(values.get(key), expiration)) ){
+						addedKeys.add(key);
+					}
+				}
+				break;
+
 			case UPDATE_ONLY_IF_CACHED:
 				for (T key : values.keySet()) {
-					if (cache.containsKey(key)) {
-						cache.put(key, new CachedObject(values.get(key),
-								expiration));
+					if ( syncPutIfCached(key, new CachedObject(values.get(key), expiration)) ){
 						addedKeys.add(key);
 					}
 				}
 				break;
 			}
-			
+
 			return addedKeys;
 		}
 	}
 
 	public Object get(Object key) {
-		synchronized (cache) {
-			CachedObject cachedObject = cache.get(key);
-			
-			if (cachedObject == null){
-				return null; //Does not exist
+			CachedObject cachedObject = syncGet(key);
+
+			if (cachedObject == null) {
+				return null; // Does not exist
 			}
-			
-			if (cachedObject.getExpirationDate() != null && cachedObject.getExpirationDate().getDateInMilliseconds() < currentTimeMillis()) {
-				cache.remove(key);
-				return null; //is expired
-			} 
-			
-			return cachedObject.getObject(); //OK
-		}
+
+			if (cachedObject.getExpirationDate() != null
+					&& cachedObject.getExpirationDate().getDateInMilliseconds() < currentTimeMillis()) {
+				syncRemove(key);
+				return null; // is expired
+			}
+
+			return cachedObject.getObject(); // OK
 	}
+
 
 	public <T> Map<T, Object> getAll(final Collection<T> keys) {
 		final HashMap<T, Object> returnMap = new HashMap<T, Object>();
 		final long currenttime = currentTimeMillis();
-		
-		synchronized (cache) {
+
 			for (T key : keys) {
-				CachedObject cachedObject = cache.get(key);
-				
-				if (cachedObject == null){
+				CachedObject cachedObject = syncGet(key);
+
+				if (cachedObject == null) {
 					continue;
 				}
-				
+
 				if (cachedObject.getExpirationDate() != null && cachedObject.getExpirationDate().getDateInMilliseconds() < currenttime) {
-					cache.remove(key);
+					syncRemove(key);
 					continue;
 				}
-				
+
 				returnMap.put(key, cachedObject.getObject());
 			}
 			return returnMap;
-		}
 	}
 
 	public boolean contains(Object key) {
-		synchronized (cache) {
+		try{
+			rwlock.readLock().lock();
 			return cache.containsKey(key);
+		}finally{
+			rwlock.readLock().unlock();
 		}
 	}
 
 	public boolean delete(Object key) {
-		synchronized (cache) {
-			return cache.remove(key) != null;
-		}
+		return syncRemove(key);
 	}
 
 	public <T> Set<T> deleteAll(Collection<T> keys) {
 		HashSet<T> returnSet = new HashSet<T>();
 		for (T key : keys) {
-			if (cache.remove(key) != null) {
+			if (syncRemove(key)) { //TODO take the wlock before the for
 				returnSet.add(key);
 			}
 		}
 		return returnSet;
 	}
+	
+	
+	/*---------------------------------*
+	 * Convenient synchronized methods *
+	 *---------------------------------*/
+	
+	private boolean syncPutAlways(Object key,CachedObject value){
+		try{
+			rwlock.writeLock().lock();
+			cache.put(key, value);
+			return true;
+		}finally{
+			rwlock.writeLock().unlock();
+		}
+	}
+	
+	private boolean syncPutIfCached(Object key,CachedObject value){
+		try{
+			rwlock.writeLock().lock();
+			if (cache.containsKey(key)){
+				cache.put(key, value);
+				return true;
+			}
+			else {
+				return false;
+			}
+		}finally{
+			rwlock.writeLock().unlock();
+		}
+	}
+	
+	private boolean syncPutIfNotPresent(Object key,CachedObject value){
+		try{
+			rwlock.writeLock().lock();
+			if (!cache.containsKey(key)){
+				cache.put(key, value);
+				return true;
+			}
+			else {
+				return false;
+			}
+		}finally{
+			rwlock.writeLock().unlock();
+		}
+	}
+	
+	private CachedObject syncGet(Object key){
+		try{
+			rwlock.readLock().lock();
+			return cache.get(key);
+		}finally{
+			rwlock.readLock().unlock();
+		}
+	}
+	
+	private boolean syncRemove(Object key) {
+		try{
+			rwlock.writeLock().lock();
+			return cache.remove(key) != null;
+		}finally{
+			rwlock.writeLock().unlock();
+		}
+	}
+	
 }
