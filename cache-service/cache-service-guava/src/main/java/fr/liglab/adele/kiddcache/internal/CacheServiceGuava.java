@@ -21,20 +21,21 @@ import fr.liglab.adele.kiddcache.ExpirationDate;
  * 
  */
 public class CacheServiceGuava implements CacheService {
-	
+
 	/**
 	 * The {@link ConcurrentMap} which contains the cached value.
 	 */
 	private final ConcurrentMap<Object, CachedObject> cache;
-	
+
 	private int concurrencyLevel = 4;
-	
+
 	private long defaultDuration = 3600;
-	
+
 	public CacheServiceGuava() {
-		cache = new MapMaker().concurrencyLevel(concurrencyLevel).expireAfterWrite(defaultDuration, SECONDS).softKeys().makeMap();
+		cache = new MapMaker().concurrencyLevel(concurrencyLevel)
+				.expireAfterWrite(defaultDuration, SECONDS).softKeys()
+				.makeMap();
 	}
-	
 
 	public void put(Object key, Object value) {
 		put(key, value, null, ALWAYS);
@@ -52,7 +53,7 @@ public class CacheServiceGuava implements CacheService {
 		switch (policy) {
 		case ALWAYS:
 			cache.put(key, new CachedObject(value, expiration));
-			putted=true;
+			putted = true;
 			break;
 
 		case ONLY_IF_NOT_PRESENT:
@@ -80,73 +81,73 @@ public class CacheServiceGuava implements CacheService {
 			PutPolicy policy) {
 
 		final HashSet<T> addedKeys = new HashSet<T>();
-		
-		synchronized (cache) {
-			switch (policy) {
-			case ALWAYS:
-				for (T key : values.keySet()) {
-					cache.put(key, new CachedObject(values.get(key), expiration));
+
+		switch (policy) {
+		case ALWAYS:
+			for (T key : values.keySet()) {
+				cache.put(key, new CachedObject(values.get(key), expiration));
+				addedKeys.add(key);
+			}
+			break;
+
+		case ONLY_IF_NOT_PRESENT:
+			for (T key : values.keySet()) {
+				if (cache.putIfAbsent(key, new CachedObject(values.get(key),
+						expiration)) == null) {
 					addedKeys.add(key);
 				}
-				break;
-
-			case ONLY_IF_NOT_PRESENT:
-				for (T key : values.keySet()) {
-					if ( cache.putIfAbsent(key, new CachedObject(values.get(key), expiration)) == null){
-						addedKeys.add(key);
-					}
-				}
-				break;
-
-			case UPDATE_ONLY_IF_CACHED:
-				for (T key : values.keySet()) {
-					if (cache.replace(key, new CachedObject(values.get(key), expiration)) !=null ){
-						addedKeys.add(key);
-					}
-				}
-				break;
 			}
+			break;
 
-			return addedKeys;
+		case UPDATE_ONLY_IF_CACHED:
+			for (T key : values.keySet()) {
+				if (cache.replace(key, new CachedObject(values.get(key),
+						expiration)) != null) {
+					addedKeys.add(key);
+				}
+			}
+			break;
 		}
+
+		return addedKeys;
 	}
 
 	public Object get(Object key) {
-			CachedObject cachedObject = cache.get(key);
+		CachedObject cachedObject = cache.get(key);
 
-			if (cachedObject == null) {
-				return null; // Does not exist
-			}
+		if (cachedObject == null) {
+			return null; // Does not exist
+		}
 
-			if (cachedObject.getExpirationDate() != null
-					&& cachedObject.getExpirationDate().getDateInMilliseconds() < currentTimeMillis()) {
-				cache.remove(key);
-				return null; // is expired
-			}
+		if (cachedObject.getExpirationDate() != null
+				&& cachedObject.getExpirationDate().getDateInMilliseconds() < currentTimeMillis()) {
+			cache.remove(key);
+			return null; // is expired
+		}
 
-			return cachedObject.getObject(); // OK
+		return cachedObject.getObject(); // OK
 	}
-
 
 	public <T> Map<T, Object> getAll(final Collection<T> keys) {
 		final HashMap<T, Object> returnMap = new HashMap<T, Object>();
 		final long currenttime = currentTimeMillis();
 
-			for (T key : keys) {
-				CachedObject cachedObject = cache.get(key);
+		for (T key : keys) {
+			CachedObject cachedObject = cache.get(key);
 
-				if (cachedObject == null) {
-					continue;
-				}
-
-				if (cachedObject.getExpirationDate() != null && cachedObject.getExpirationDate().getDateInMilliseconds() < currenttime) {
-					cache.remove(key);
-					continue;
-				}
-
-				returnMap.put(key, cachedObject.getObject());
+			if (cachedObject == null) {
+				continue;
 			}
-			return returnMap;
+
+			if (cachedObject.getExpirationDate() != null
+					&& cachedObject.getExpirationDate().getDateInMilliseconds() < currenttime) {
+				cache.remove(key);
+				continue;
+			}
+
+			returnMap.put(key, cachedObject.getObject());
+		}
+		return returnMap;
 	}
 
 	public boolean contains(Object key) {
@@ -166,5 +167,5 @@ public class CacheServiceGuava implements CacheService {
 		}
 		return returnSet;
 	}
-	
+
 }

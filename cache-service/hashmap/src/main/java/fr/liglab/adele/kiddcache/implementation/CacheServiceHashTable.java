@@ -8,6 +8,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -21,11 +23,17 @@ import fr.liglab.adele.kiddcache.ExpirationDate;
 public class CacheServiceHashTable implements CacheService {
 	
 	private final ReadWriteLock rwlock = new ReentrantReadWriteLock();
+	
+	private int initialCapacity = 16;
+	
+	private float loadFactor = 16;
+	
+	private int concurrencyLevel = 4;
 
 	/**
-	 * The {@link Map} which contains the cached value.
+	 * The {@link ConcurrentMap} which contains the cached value.
 	 */
-	private final Map<Object, CachedObject> cache = new HashMap<Object, CachedObject>();
+	private final ConcurrentMap<Object, CachedObject> cache = new ConcurrentHashMap<Object, CachedObject>(initialCapacity, loadFactor, concurrencyLevel);
 
 	public void put(Object key, Object value) {
 		put(key, value, null, ALWAYS);
