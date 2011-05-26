@@ -198,10 +198,10 @@ public class CacheServiceTest {
 		String key = "key";
 
 		// Put the log in the cache in Expiration time of 1 seconds
-		cache.put(key, log, ExpirationDate.createFromDeltaSeconds(1));
+		cache.put(key, log, ExpirationDate.createFromDeltaMillis(100));
 
-		// Wait 2 seconds
-		waitForIt(2000);
+		// Wait 150 milliseconds
+		waitForIt(150);
 
 		// Get the cached object
 		Object logCached = cache.get(key);
@@ -222,10 +222,8 @@ public class CacheServiceTest {
 		CacheService cache = getDefaultCacheService();
 		String key = "key";
 
-		// Put the log in the cache in Expiration time of 10 seconds and ALWAYS
-		// policy
-		cache.put(key, log, ExpirationDate.createFromDeltaSeconds(10),
-				CacheService.PutPolicy.ALWAYS);
+		// Put the log in the cache with ALWAYS policy
+		cache.put(key, log, null, CacheService.PutPolicy.ALWAYS);
 
 		// Get the cached object
 		Object logCached = cache.get(key);
@@ -236,10 +234,8 @@ public class CacheServiceTest {
 		// verify that there is no side effect
 		verifyZeroInteractions(log);
 
-		// Put the log2 in the cache in Expiration time of 10 seconds and ALWAYS
-		// policy
-		cache.put(key, log2, ExpirationDate.createFromDeltaSeconds(10),
-				CacheService.PutPolicy.ALWAYS);
+		// Put the log2 in the cache with ALWAYS  policy
+		cache.put(key, log2, null, CacheService.PutPolicy.ALWAYS);
 
 		// Get the cached object
 		Object logCached2 = cache.get(key);
@@ -266,11 +262,8 @@ public class CacheServiceTest {
 		CacheService cache = getDefaultCacheService();
 		String key = "key";
 
-		// Put the log in the cache in Expiration time of 10 seconds and
-		// ONLY_IF_NOT_PRESENT
-		// policy
-		cache.put(key, log, ExpirationDate.createFromDeltaSeconds(10),
-				CacheService.PutPolicy.ONLY_IF_NOT_PRESENT);
+		// Put the log in the cache with ONLY_IF_NOT_PRESENT policy
+		cache.put(key, log, null, CacheService.PutPolicy.ONLY_IF_NOT_PRESENT);
 
 		// Get the cached object
 		Object logCached = cache.get(key);
@@ -281,12 +274,8 @@ public class CacheServiceTest {
 		// verify that there is no side effect
 		verifyZeroInteractions(log);
 
-		// Put the log2 in the cache in Expiration time of 10 seconds and
-		// ONLY_IF_NOT_PRESENT
-		// policy
-		answer = cache.put(key, log2,
-				ExpirationDate.createFromDeltaSeconds(10),
-				CacheService.PutPolicy.ONLY_IF_NOT_PRESENT);
+		// Put the log2 in the cache with ONLY_IF_NOT_PRESENT policy
+		answer = cache.put(key, log2, null, CacheService.PutPolicy.ONLY_IF_NOT_PRESENT);
 
 		// check if did not put, already exists for given key
 		assertEquals(false, answer);
@@ -316,11 +305,8 @@ public class CacheServiceTest {
 		CacheService cache = getDefaultCacheService();
 		String key = "key";
 
-		// Put the log in the cache in Expiration time of 10 seconds and
-		// ONLY_IF_NOT_PRESENT
-		// policy
-		answer = cache.put(key, log, ExpirationDate.createFromDeltaSeconds(10),
-				CacheService.PutPolicy.UPDATE_ONLY_IF_CACHED);
+		// Put the log in the cache with UPDATE_ONLY_IF_CACHED policy
+		answer = cache.put(key, log, null, CacheService.PutPolicy.UPDATE_ONLY_IF_CACHED);
 
 		// check if did not put, nothing cached for given key
 		assertEquals(false, answer);
@@ -337,12 +323,8 @@ public class CacheServiceTest {
 		// Put the log in the cache
 		cache.put(key, log);
 
-		// Put the log2 in the cache in Expiration time of 10 seconds and
-		// ONLY_IF_NOT_PRESENT
-		// policy
-		answer = cache.put(key, log2,
-				ExpirationDate.createFromDeltaSeconds(10),
-				CacheService.PutPolicy.UPDATE_ONLY_IF_CACHED);
+		// Put the log2 in the cache with UPDATE_ONLY_IF_CACHED policy
+		answer = cache.put(key, log2, null, CacheService.PutPolicy.UPDATE_ONLY_IF_CACHED);
 
 		// check if put
 		assertEquals(true, answer);
@@ -387,7 +369,6 @@ public class CacheServiceTest {
 		// verify that there is no side effect
 		verifyZeroInteractions(log);
 		verifyZeroInteractions(log2);
-		
 	}
 
 	private ComponentInstance createInstance() {
