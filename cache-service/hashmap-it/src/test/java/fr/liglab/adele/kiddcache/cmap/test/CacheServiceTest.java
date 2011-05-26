@@ -3,7 +3,9 @@ package fr.liglab.adele.kiddcache.cmap.test;
 import static fr.liglab.adele.kiddcache.cmap.test.ITTools.waitForIt;
 import static org.apache.felix.ipojo.ComponentInstance.VALID;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.MockitoAnnotations.initMocks;
@@ -21,6 +23,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.ops4j.pax.exam.Inject;
 import org.ops4j.pax.exam.Option;
 import org.ops4j.pax.exam.OptionUtils;
@@ -157,6 +160,57 @@ public class CacheServiceTest {
 
 		// verify that there is no side effect
 		verifyZeroInteractions(log);
+	}
+	
+	/**
+	 * Test {@link CacheService#put(Object, Object)} multiple case.
+	 */
+	@Test
+	public void testMultiplePut() {
+		// Get the cache service
+		CacheService cache = getDefaultCacheService();
+
+		
+		for(int i = 0;i < MAX_MOCK;i++){
+			Object value = Mockito.mock(Object.class);
+			String key = "key"+i;
+			
+			//Put the value in the cache
+			cache.put(key, value);
+		}
+		
+		for(int i = 0;i < MAX_MOCK;i++){
+			String key = "key"+i;
+			Object value = cache.get(key);
+			
+			
+			// verify that there is no side effect
+			verifyZeroInteractions(value);
+		}
+	}
+	
+	/**
+	 * Test {@link CacheService#delete(Object)} simple case.
+	 */
+	@Test
+	public void testSimpleDelete() {
+		// Get the cache service
+		CacheService cache = getDefaultCacheService();
+
+		// The key
+		String key = "key";
+
+		// Put the log in the cache
+		cache.put(key, log);
+		
+		// Check that the value has been successfully put in the cache
+		assertTrue(cache.contains(key));
+		
+		// Delete the cached value
+		cache.delete(key);
+		
+		// Check that value has been successfully deleted
+		assertFalse(cache.contains(key));
 	}
 
 	/**
