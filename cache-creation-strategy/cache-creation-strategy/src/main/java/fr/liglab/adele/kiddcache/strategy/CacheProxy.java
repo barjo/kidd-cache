@@ -3,6 +3,9 @@ package fr.liglab.adele.kiddcache.strategy;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Properties;
 
 import org.apache.felix.ipojo.InstanceManager;
@@ -14,57 +17,74 @@ import org.osgi.util.tracker.ServiceTracker;
 import org.osgi.util.tracker.ServiceTrackerCustomizer;
 
 import fr.liglab.adele.kiddcache.CacheService;
+import fr.liglab.adele.kiddcache.ExpirationDate;
+import fr.liglab.adele.kiddcache.strategy.annotations.Cached;
 
-public class CacheProxy extends CreationStrategy implements InvocationHandler, ServiceTrackerCustomizer {
+public class CacheProxy extends CreationStrategy implements InvocationHandler,
+		ServiceTrackerCustomizer {
 	private volatile Object cachedpojo;
 	private volatile CacheService cacheService;
 	private InstanceManager manager;
 	private ServiceTracker tracker;
-	
 
 	@Override
 	public void onPublication(InstanceManager manager, String[] interfaces,
 			Properties props) {
-		tracker = new ServiceTracker(manager.getContext(), CacheService.class.getName(), this);
-		tracker.open(false);
-		
+
+		this.manager = manager;
+		tracker = new ServiceTracker(manager.getContext(),
+				CacheService.class.getName(), this);
+		if (tracker != null)
+			tracker.open();
+
 		cachedpojo = Proxy.newProxyInstance(
 				manager.getClazz().getClassLoader(), manager.getClazz()
 						.getInterfaces(), this);
-		this.manager = manager;
+
 	}
 
 	@Override
 	public void onUnpublication() {
-//		manager.deletePojoObject(manager.getPojoObject());
-		if(tracker != null )tracker.close();
+		// manager.deletePojoObject(manager.getPojoObject());
+		if (tracker != null)
+			tracker.close();
 	}
 
 	public Object invoke(Object proxy, Method method, Object[] args)
 			throws Throwable {
 		Object returnObject = null;
-		
-		//check if cache service is available
+		// prevent of double invoke a method when it returned a null value
+		boolean methodInvoked = false;
+		Cached cacheAnnotation = method.getAnnotation(Cached.class);
+
 		synchronized (tracker) {
-
-			if (cacheService != null) {
-				returnObject = cacheService.get(args[0].toString());
-
+			// check if cache service is available and method is cached
+			if (cacheAnnotation != null && cacheService != null) {
+				returnObject = cacheService.get(Arrays.asList(args));
 				if (returnObject == null) {
 					returnObject = method.invoke(manager.getPojoObject(), args);
-					cacheService.put(args[0].toString(), returnObject);
+					methodInvoked = true;
+					// check if expiration time is set
+					if (cacheAnnotation.expireSeconds() > 0) {
+						cacheService.put(Arrays.asList(args), returnObject,
+								ExpirationDate
+										.createFromDeltaSeconds(cacheAnnotation
+												.expireSeconds()),
+								cacheAnnotation.policy());
+					} else {
+						cacheService.put(Arrays.asList(args), returnObject,
+								null, cacheAnnotation.policy());
+					}
 				}
 			}
 		}
-		
-		if (returnObject == null) {
+
+		if (returnObject == null && !methodInvoked) {
 			returnObject = method.invoke(manager.getPojoObject(), args);
 		}
-		
+
 		return returnObject;
 	}
-
-	//
 
 	public Object getService(Bundle arg0, ServiceRegistration arg1) {
 		return cachedpojo;
@@ -74,8 +94,8 @@ public class CacheProxy extends CreationStrategy implements InvocationHandler, S
 		//
 	}
 
-	//tracker methods
-	
+	// tracker methods
+
 	public Object addingService(ServiceReference sref) {
 		synchronized (tracker) {
 			cacheService = (CacheService) manager.getContext().getService(sref);

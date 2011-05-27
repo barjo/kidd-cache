@@ -59,7 +59,7 @@
 							${pom.artifactId}
 						</Bundle-SymbolicName>
 						<Export-Package>
-							fr.liglab.adele.kiddcache.strategy
+							fr.liglab.adele.kiddcache.strategy,fr.liglab.adele.kiddcache.strategy.annotations
 						</Export-Package>
 						<Import-Package>
 							*
