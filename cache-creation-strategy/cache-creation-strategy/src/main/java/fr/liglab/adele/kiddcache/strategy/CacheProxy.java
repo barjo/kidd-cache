@@ -6,6 +6,7 @@ import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Properties;
 
 import org.apache.felix.ipojo.InstanceManager;
@@ -53,6 +54,7 @@ public class CacheProxy extends CreationStrategy implements InvocationHandler,
 	public Object invoke(Object proxy, Method method, Object[] args)
 			throws Throwable {
 		Object returnObject = null;
+		List<Object> key;
 		// prevent of double invoke a method when it returned a null value
 		boolean methodInvoked = false;
 		Cached cacheAnnotation = method.getAnnotation(Cached.class);
@@ -60,19 +62,25 @@ public class CacheProxy extends CreationStrategy implements InvocationHandler,
 		synchronized (tracker) {
 			// check if cache service is available and method is cached
 			if (cacheAnnotation != null && cacheService != null) {
-				returnObject = cacheService.get(Arrays.asList(args));
+				
+				//create a caching key from method name and arguments
+				key = new ArrayList<Object>();
+				key.add(method.getName());
+				key.addAll(Arrays.asList(args));
+				
+				returnObject = cacheService.get(key);
 				if (returnObject == null) {
 					returnObject = method.invoke(manager.getPojoObject(), args);
 					methodInvoked = true;
 					// check if expiration time is set
 					if (cacheAnnotation.expireSeconds() > 0) {
-						cacheService.put(Arrays.asList(args), returnObject,
+						cacheService.put(key, returnObject,
 								ExpirationDate
 										.createFromDeltaSeconds(cacheAnnotation
 												.expireSeconds()),
 								cacheAnnotation.policy());
 					} else {
-						cacheService.put(Arrays.asList(args), returnObject,
+						cacheService.put(key, returnObject,
 								null, cacheAnnotation.policy());
 					}
 				}
