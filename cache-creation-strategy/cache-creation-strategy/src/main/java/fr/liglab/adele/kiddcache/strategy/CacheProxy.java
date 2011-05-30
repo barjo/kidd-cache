@@ -62,26 +62,27 @@ public class CacheProxy extends CreationStrategy implements InvocationHandler,
 		synchronized (tracker) {
 			// check if cache service is available and method is cached
 			if (cacheAnnotation != null && cacheService != null) {
-				
-				//create a caching key from method name and arguments
 				key = new ArrayList<Object>();
-				key.add(method.getName());
-				key.addAll(Arrays.asList(args));
-				
+				if (cacheAnnotation.keyValue().equals("")) {
+					// create a caching key from method name and arguments
+					key.add(method.getName());
+					key.addAll(Arrays.asList(args));
+				} else {
+					key.add(cacheAnnotation.keyValue());
+				}
 				returnObject = cacheService.get(key);
 				if (returnObject == null) {
 					returnObject = method.invoke(manager.getPojoObject(), args);
 					methodInvoked = true;
 					// check if expiration time is set
 					if (cacheAnnotation.expireSeconds() > 0) {
-						cacheService.put(key, returnObject,
-								ExpirationDate
-										.createFromDeltaSeconds(cacheAnnotation
-												.expireSeconds()),
-								cacheAnnotation.policy());
+						cacheService.put(key, returnObject, ExpirationDate
+								.createFromDeltaSeconds(cacheAnnotation
+										.expireSeconds()), cacheAnnotation
+								.policy());
 					} else {
-						cacheService.put(key, returnObject,
-								null, cacheAnnotation.policy());
+						cacheService.put(key, returnObject, null,
+								cacheAnnotation.policy());
 					}
 				}
 			}

@@ -11,4 +11,6 @@ public @interface Cached {
 
 	CacheService.PutPolicy policy() default CacheService.PutPolicy.ALWAYS;
 	int expireSeconds() default 0;
+	String keyValue() default "";
+	
 }
