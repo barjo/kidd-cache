@@ -5,7 +5,6 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
 
@@ -64,7 +63,8 @@ public class CacheProxy extends CreationStrategy implements InvocationHandler,
 			if (cacheAnnotation != null && cacheService != null) {
 				key = new ArrayList<Object>();
 				if (cacheAnnotation.keyValue().equals("")) {
-					// create a caching key from method name and arguments
+					// create a caching key from class name, method name and arguments
+					key.add(manager.getClazz());
 					key.add(method.getName());
 					key.addAll(Arrays.asList(args));
 				} else {
