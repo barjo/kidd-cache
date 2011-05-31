@@ -1,6 +1,12 @@
 <ipojo>
-	<component name="cache.service.component" classname="fr.liglab.adele.kiddcache.implementation.CacheServiceHashTable">
+	<component name="cache.service.component"
+		classname="fr.liglab.adele.kiddcache.implementation.CacheServiceHashTable">
 		<provides/>
+		<properties propagation="true">
+			<property field="secondsCheck" value="10"/>
+		</properties>
+		<callback transition="validate" method="starting" />
+		<callback transition="invalidate" method="stopping" />
 	</component>
 	<instance name="cache.service.hashtable" component="cache.service.component" />
 </ipojo>

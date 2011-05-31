@@ -54,7 +54,7 @@
 							fr.liglab.adele.kiddcache;version=${interface.version}
 						</Import-Package>
 						<Private-Package>
-							fr.liglab.adele.kiddcache.implementation
+							fr.liglab.adele.kiddcache.implementation,fr.liglab.adele.kiddcache.implementation.cleaner
 						</Private-Package>
 					</instructions>
 				</configuration>
