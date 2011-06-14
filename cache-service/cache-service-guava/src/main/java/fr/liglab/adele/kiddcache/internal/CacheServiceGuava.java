@@ -33,7 +33,7 @@ public class CacheServiceGuava implements CacheService {
 
 	public CacheServiceGuava() {
 		cache = new MapMaker().concurrencyLevel(concurrencyLevel)
-				.expireAfterWrite(defaultDuration, SECONDS).softKeys()
+				.expireAfterWrite(defaultDuration, SECONDS)
 				.makeMap();
 	}
 

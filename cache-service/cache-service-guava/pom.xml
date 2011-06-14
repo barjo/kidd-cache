@@ -55,7 +55,7 @@
 				<extensions>true</extensions>
 				<configuration>
 					<instructions>
-						<Bundle-SymbolicName>fr.liglab.adele.kiddcache.hashtable</Bundle-SymbolicName>
+						<Bundle-SymbolicName>fr.liglab.adele.kiddcache.guava</Bundle-SymbolicName>
 						<Bundle-Vendor>LIG - ADELE</Bundle-Vendor>
 						<Import-Package>
 							fr.liglab.adele.kiddcache;version=${interface.version},
