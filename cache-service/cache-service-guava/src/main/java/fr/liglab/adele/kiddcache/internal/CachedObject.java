@@ -4,8 +4,6 @@ import fr.liglab.adele.kiddcache.ExpirationDate;
 
 /**
  * The cached object is immutable.
- * TODO comment 
- * XXX what about the synchro ?
  */
 public final class CachedObject {
 	private final Object object;

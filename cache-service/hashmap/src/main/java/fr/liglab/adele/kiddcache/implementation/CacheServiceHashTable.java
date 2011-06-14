@@ -174,7 +174,7 @@ public class CacheServiceHashTable implements CacheService {
 	public <T> Set<T> deleteAll(Collection<T> keys) {
 		HashSet<T> returnSet = new HashSet<T>();
 		for (T key : keys) {
-			if (syncRemove(key)) { // TODO take the wlock before the for
+			if (syncRemove(key)) {
 				returnSet.add(key);
 			}
 		}
