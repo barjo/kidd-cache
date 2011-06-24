@@ -1,0 +1,10 @@
+<ipojo>
+	<component name="cache.service.component.guava"
+		classname="fr.liglab.adele.kiddcache.internal.CacheServiceGuava">
+		<provides/>
+		<properties propagation="true">
+			<property field="defaultDuration" value="3600"/>
+		</properties>
+	</component>
+	<instance name="cache.service.guava" component="cache.service.component.guava" />
+</ipojo>

@@ -29,7 +29,7 @@ public class CacheServiceGuava implements CacheService {
 
 	private int concurrencyLevel = 4;
 
-	private long defaultDuration = 3600;
+	private int defaultDuration;
 
 	public CacheServiceGuava() {
 		cache = new MapMaker().concurrencyLevel(concurrencyLevel)
