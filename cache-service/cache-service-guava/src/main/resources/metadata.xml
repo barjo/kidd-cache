@@ -1,10 +1,10 @@
 <ipojo>
-	<component name="cache.service.component" classname="fr.liglab.adele.kiddcache.internal.CacheServiceGuava">
+	<component name="cache.service.component.guava" classname="fr.liglab.adele.kiddcache.internal.CacheServiceGuava">
 		<provides/>
 		<properties>
 			<property name="concurrency.level" field="concurrencyLevel" value="4"/>
 			<property name="default.duration" field="defaultDuration" value="3600"/>
 		</properties>
 	</component>
-	<instance name="cache.service.hashtable" component="cache.service.component" />
+	<instance name="cache.service.guava" component="cache.service.component.guava" />
 </ipojo>

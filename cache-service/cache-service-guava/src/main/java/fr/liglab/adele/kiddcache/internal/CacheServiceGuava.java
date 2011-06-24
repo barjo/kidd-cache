@@ -27,7 +27,7 @@ public class CacheServiceGuava implements CacheService {
 	 */
 	private final ConcurrentMap<Object, CachedObject> cache;
 
-	private int concurrencyLevel = 4;
+	private int concurrencyLevel;
 
 	private int defaultDuration;
 
