@@ -10,8 +10,8 @@
   <modules>
     <module>cache-service</module>
     <module>hashmap</module>
-    <module>hashmap-it</module>
     <module>cache-service-guava</module>
+    <module>test</module>
   </modules>
 
   <build>
