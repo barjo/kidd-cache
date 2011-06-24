@@ -1,0 +1,426 @@
+package fr.liglab.adele.kiddcache.test;
+
+import static fr.liglab.adele.kiddcache.test.ITTools.waitForIt;
+import static org.apache.felix.ipojo.ComponentInstance.VALID;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.Mockito.verifyZeroInteractions;
+import static org.mockito.MockitoAnnotations.initMocks;
+import static org.ops4j.pax.exam.CoreOptions.felix;
+import static org.ops4j.pax.exam.CoreOptions.mavenBundle;
+import static org.ops4j.pax.exam.CoreOptions.options;
+import static org.ops4j.pax.exam.CoreOptions.provision;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import org.apache.felix.ipojo.ComponentInstance;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.ops4j.pax.exam.Inject;
+import org.ops4j.pax.exam.Option;
+import org.ops4j.pax.exam.OptionUtils;
+import org.ops4j.pax.exam.junit.Configuration;
+import org.ops4j.pax.exam.junit.JUnitOptions;
+import org.osgi.framework.BundleContext;
+import org.osgi.service.log.LogService;
+import org.ow2.chameleon.testing.helpers.IPOJOHelper;
+import org.ow2.chameleon.testing.helpers.OSGiHelper;
+
+import fr.liglab.adele.kiddcache.CacheService;
+import fr.liglab.adele.kiddcache.ExpirationDate;
+
+
+public abstract class CacheServiceTestAbstract {
+
+
+	/*
+	 * Number of mock object by test.
+	 */
+	private static final int MAX_MOCK = 10;
+
+	@Mock
+	LogService log;
+
+	@Mock
+	LogService log2;
+
+	@Inject
+	private BundleContext context;
+
+	private OSGiHelper osgi;
+
+	private IPOJOHelper ipojo;
+
+	@Before
+	public void setUp() {
+		osgi = new OSGiHelper(context);
+		ipojo = new IPOJOHelper(context);
+
+		// initialise the annoted mock object
+		initMocks(this);
+	}
+
+	@After
+	public void tearDown() {
+		osgi.dispose();
+		ipojo.dispose();
+	}
+
+	@Configuration
+	public  Option[] configure() {
+		Option[] platform = options(felix());
+		Option[] r = OptionUtils.combine(platform, getPaxExamBundleOptions());
+
+		return r;
+	}
+
+	/**
+	 * Mockito bundles
+	 */
+	@Configuration
+	public static Option[] mockitoBundle() {
+		return options(JUnitOptions.mockitoBundles());
+	}
+
+	/**
+	 * Test if the factory is valid and able to create instances.
+	 */
+	@Test
+	public void testInstanceCreation() {
+		ComponentInstance instance = createInstance();
+
+		waitForIt(200);
+
+		// The instance must be valid since there is an ExporterService ;)
+		assertEquals(VALID, instance.getState());
+
+	}
+
+	/**
+	 * Test if the CacheService is available.
+	 */
+	@Test
+	public void testCacheServiceAvailability() {
+		CacheService cache = getDefaultCacheService();
+
+		// The Default CacheService must be available
+		assertNotNull(cache);
+	}
+
+	/**
+	 * Test {@link CacheService#put(Object, Object)} simple case.
+	 */
+	@Test
+	public void testPut() {
+		// Get the cache service
+		CacheService cache = getDefaultCacheService();
+
+		String key = "key";
+
+		// Put the log in the cache
+		cache.put(key, log);
+
+		// Get the cached object
+		Object logCached = cache.get(key);
+
+		// verify that we get the Log object
+		assertEquals(logCached, log);
+
+		// verify that there is no side effect
+		verifyZeroInteractions(log);
+	}
+
+	/**
+	 * Test {@link CacheService#put(Object, Object)} multiple case.
+	 */
+	@Test
+	public void testMultiplePut() {
+		// Get the cache service
+		CacheService cache = getDefaultCacheService();
+
+		for (int i = 0; i < MAX_MOCK; i++) {
+			Object value = Mockito.mock(Object.class);
+			String key = "key" + i;
+
+			// Put the value in the cache
+			cache.put(key, value);
+		}
+
+		for (int i = 0; i < MAX_MOCK; i++) {
+			String key = "key" + i;
+			Object value = cache.get(key);
+
+			// verify that there is no side effect
+			verifyZeroInteractions(value);
+		}
+	}
+
+	/**
+	 * Test {@link CacheService#delete(Object)} simple case.
+	 */
+	@Test
+	public void testSimpleDelete() {
+		// Get the cache service
+		CacheService cache = getDefaultCacheService();
+
+		// The key
+		String key = "key";
+
+		// Put the log in the cache
+		cache.put(key, log);
+
+		// Check that the value has been successfully put in the cache
+		assertTrue(cache.contains(key));
+
+		// Delete the cached value
+		cache.delete(key);
+
+		// Check that value has been successfully deleted
+		assertFalse(cache.contains(key));
+	}
+
+	/**
+	 * Test {@link CacheService#put(Object, Object)} simple case with overriding
+	 * a cached object for the same key
+	 */
+	@Test
+	public void testPutForSameKey() {
+		// Get the cache service
+		CacheService cache = getDefaultCacheService();
+
+		String key = "key";
+
+		// Put the log in the cache
+		cache.put(key, log);
+
+		// Put log in the cache on same key
+		cache.put(key, log2);
+
+		// Get the cached object
+		Object cachedLog2 = cache.get(key);
+
+		// Verify that we got log2 object and previous one has been deleted
+		assertEquals(log2, cachedLog2);
+
+		// verify that there is no side effect
+		verifyZeroInteractions(log2);
+
+	}
+
+	/**
+	 * Test {@link CacheService#put(Object, Object, ExpirationDate)} simple case
+	 * with expiration time
+	 */
+	@Test
+	public void testPutWithExpirationTime() {
+		// Get the cache service
+		CacheService cache = getDefaultCacheService();
+		String key = "key";
+
+		// Put the log in the cache in Expiration time of 1 seconds
+		cache.put(key, log, ExpirationDate.createFromDeltaMillis(100));
+
+		// Wait 150 milliseconds
+		waitForIt(150);
+
+		// Get the cached object
+		Object logCached = cache.get(key);
+
+		// verify that we get null, because of Expiration time has been reached
+		assertEquals(null, logCached);
+	}
+
+	/**
+	 * Test
+	 * {@link CacheService#put(Object, Object, ExpirationDate, fr.liglab.adele.kiddcache.CacheService.PutPolicy)}
+	 * case with Always policy
+	 */
+	@Test
+	public void testPutWithAlwaysPoliciy() {
+
+		// Get the cache service
+		CacheService cache = getDefaultCacheService();
+		String key = "key";
+
+		// Put the log in the cache with ALWAYS policy
+		cache.put(key, log, null, CacheService.PutPolicy.ALWAYS);
+
+		// Get the cached object
+		Object logCached = cache.get(key);
+
+		// verify that we get the Log object
+		assertEquals(logCached, log);
+
+		// verify that there is no side effect
+		verifyZeroInteractions(log);
+
+		// Put the log2 in the cache with ALWAYS policy
+		cache.put(key, log2, null, CacheService.PutPolicy.ALWAYS);
+
+		// Get the cached object
+		Object logCached2 = cache.get(key);
+
+		// verify that we get the Log object
+		assertEquals(logCached2, log2);
+
+		// verify that there is no side effect
+		verifyZeroInteractions(log2);
+
+	}
+
+	/**
+	 * Test
+	 * {@link CacheService#put(Object, Object, ExpirationDate, fr.liglab.adele.kiddcache.CacheService.PutPolicy)}
+	 * case with ONLY_IF_NOT_PRESENT policy
+	 */
+	@Test
+	public void testPutWithOnlyIfNotPresentPolicy() {
+
+		boolean answer;
+
+		// Get the cache service
+		CacheService cache = getDefaultCacheService();
+		String key = "key";
+
+		// Put the log in the cache with ONLY_IF_NOT_PRESENT policy
+		cache.put(key, log, null, CacheService.PutPolicy.ONLY_IF_NOT_PRESENT);
+
+		// Get the cached object
+		Object logCached = cache.get(key);
+
+		// verify that we get the Log object
+		assertEquals(logCached, log);
+
+		// verify that there is no side effect
+		verifyZeroInteractions(log);
+
+		// Put the log2 in the cache with ONLY_IF_NOT_PRESENT policy
+		answer = cache.put(key, log2, null,
+				CacheService.PutPolicy.ONLY_IF_NOT_PRESENT);
+
+		// check if did not put, already exists for given key
+		assertEquals(false, answer);
+
+		// Get the cached object
+		Object logCached2 = cache.get(key);
+
+		// verify that we get the Log object
+		assertEquals(log, logCached2);
+
+		// verify that there is no side effect
+		verifyZeroInteractions(log2);
+
+	}
+
+	/**
+	 * Test
+	 * {@link CacheService#put(Object, Object, ExpirationDate, fr.liglab.adele.kiddcache.CacheService.PutPolicy)}
+	 * case with UPDATE_ONLY_IF_CACHED policy
+	 */
+	@Test
+	public void testPutWithUpdateOnlyIfCachedPolicy() {
+
+		boolean answer;
+
+		// Get the cache service
+		CacheService cache = getDefaultCacheService();
+		String key = "key";
+
+		// Put the log in the cache with UPDATE_ONLY_IF_CACHED policy
+		answer = cache.put(key, log, null,
+				CacheService.PutPolicy.UPDATE_ONLY_IF_CACHED);
+
+		// check if did not put, nothing cached for given key
+		assertEquals(false, answer);
+
+		// Get the cached object
+		Object logCached = cache.get(key);
+
+		// verify that we get nothing
+		assertEquals(null, logCached);
+
+		// verify that there is no side effect
+		verifyZeroInteractions(log);
+
+		// Put the log in the cache
+		cache.put(key, log);
+
+		// Put the log2 in the cache with UPDATE_ONLY_IF_CACHED policy
+		answer = cache.put(key, log2, null,
+				CacheService.PutPolicy.UPDATE_ONLY_IF_CACHED);
+
+		// check if put
+		assertEquals(true, answer);
+
+		// Get the cached object
+		Object logCached2 = cache.get(key);
+
+		// verify that we get the Log2 object
+		assertEquals(log2, logCached2);
+
+		// verify that there is no side effect
+		verifyZeroInteractions(log2);
+
+	}
+
+	/**
+	 * Test {@link CacheService#putAll(java.util.Map)} simple putAll and getAll
+	 * case
+	 */
+	@Test
+	public void testPutGetAll() {
+
+		// Get the cache service
+		CacheService cache = getDefaultCacheService();
+		String key1 = "key1";
+		String key2 = "key2";
+
+		// Preparing a hashmap
+		Map<String, Object> map = new HashMap<String, Object>();
+		map.put(key1, log);
+		map.put(key2, log2);
+
+		// Put a map into a cache
+		cache.putAll(map);
+
+		// get a cached map
+		map = cache.getAll(map.keySet());
+
+		// verify that we got correct objects
+		assertEquals(log, map.get(key1));
+		assertEquals(log2, map.get(key2));
+
+		// verify that there is no side effect
+		verifyZeroInteractions(log);
+		verifyZeroInteractions(log2);
+	}
+
+	private ComponentInstance createInstance() {
+		ComponentInstance instance = null;
+		try {
+			instance = ipojo.createComponentInstance(this.getCacheServiceFactory());
+		} catch (Exception e) {
+			fail("Unable to create an  instance, "
+					+ e.getMessage());
+		}
+
+		return instance;
+	}
+
+	private CacheService getDefaultCacheService() {
+		return (CacheService) osgi.getServiceObject(
+				CacheService.class.getName(), "(instance.name="
+						+ this.getInstanceName()+ ")");
+	}
+	
+	abstract String getInstanceName();
+	abstract String getCacheServiceFactory();
+	abstract Option[] getPaxExamBundleOptions();
+}
